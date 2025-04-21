@@ -1,0 +1,138 @@
+name: Generate Changelog
+description: Generate changelog and release notes using gptchangelog
+
+inputs:
+  OPENAI_API_KEY:
+    required: true
+  GH_TOKEN:
+    required: true
+  LERIAN_CI_CD_USER_GPG_KEY:
+    required: true
+  LERIAN_CI_CD_USER_GPG_KEY_PASSWORD:
+    required: true
+  LERIAN_CI_CD_USER_NAME:
+    required: true
+  LERIAN_CI_CD_USER_EMAIL:
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - run: |
+        python -m pip install --upgrade pip
+        pip install gptchangelog
+      shell: bash
+
+    - run: |
+        mkdir -p .gptchangelog
+        echo "[gptchangelog]" > .gptchangelog/config.ini
+        echo "openai = true" >> .gptchangelog/config.ini
+        echo "[openai]" >> .gptchangelog/config.ini
+        echo "api_key = ${OPENAI_API_KEY}" >> .gptchangelog/config.ini
+        echo "model = gpt-4o" >> .gptchangelog/config.ini
+        echo "max_context_tokens = 80000" >> .gptchangelog/config.ini
+      shell: bash
+      env:
+        OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY }}
+
+    - run: |
+        mkdir -p .gptchangelog/templates
+        cat > .gptchangelog/templates/changelog_prompt.txt << 'EOF'
+        # $project_name Changelog
+
+        ## Release $next_version (Released on $current_date)
+
+        ### What's New
+        $commit_messages
+
+        ### ✨ Features
+        - Highlight new features added in this release.
+
+        ### 🛠 Fixes
+        - List bug fixes and improvements.
+
+        ### 📚 Documentation
+        - Summarize updates to documentation.
+
+        ### 🚀 Improvements
+        - Highlight performance or backend optimizations.
+
+        ### ⚠️ Breaking Changes
+        - List any breaking changes here.
+
+        ### 🙌 Contributors
+        - Acknowledge contributors for this release.
+        EOF
+      shell: bash
+
+    - run: |
+        echo "OPENAI_API_KEY=${OPENAI_API_KEY}" > .env
+        git fetch --tags
+
+        LAST_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD)
+        PENULT_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD^)
+
+        echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
+
+        gptchangelog generate --since $PENULT_TAG --to $LAST_TAG --output CHANGELOG.md
+      shell: bash
+      env:
+        OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY }}
+
+    - run: |
+        sed -i "2s|^## \[v.*\] - .*|## Version $LAST_TAG|" CHANGELOG.md
+      shell: bash
+
+    - run: |
+        echo "OPENAI_API_KEY=${OPENAI_API_KEY}" > .env
+        git fetch --tags
+
+        LAST_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD)
+        PENULT_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD^)
+
+        gptchangelog generate --since $PENULT_TAG --to $LAST_TAG --output RELEASE_NOTES.md
+
+        echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
+      shell: bash
+      env:
+        OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY }}
+
+    - run: |
+        HEADER_LINE=$(grep -n "^## \[v" RELEASE_NOTES.md | cut -d: -f1)
+        sed -i "${HEADER_LINE}s|^## \[v[^]]*\] - .*|## Version ${LAST_TAG//v/}|" RELEASE_NOTES.md
+        cat RELEASE_NOTES.md
+      shell: bash
+
+    - run: |
+        gh release edit ${{ env.LAST_TAG }} --notes-file RELEASE_NOTES.md
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.GH_TOKEN }}
+
+    - uses: crazy-max/ghaction-import-gpg@v6
+      with:
+        gpg_private_key: ${{ inputs.LERIAN_CI_CD_USER_GPG_KEY }}
+        passphrase: ${{ inputs.LERIAN_CI_CD_USER_GPG_KEY_PASSWORD }}
+        git_committer_name: ${{ inputs.LERIAN_CI_CD_USER_NAME }}
+        git_committer_email: ${{ inputs.LERIAN_CI_CD_USER_EMAIL }}
+        git_config_global: true
+        git_user_signingkey: true
+        git_commit_gpgsign: true
+
+    - run: |
+        git config --global user.name "${{ inputs.LERIAN_CI_CD_USER_NAME }}"
+        git config --global user.email "${{ inputs.LERIAN_CI_CD_USER_EMAIL }}"
+      shell: bash
+
+    - run: |
+        git add CHANGELOG.md
+        git diff --cached --quiet || (git commit -S -m "chore(release): Update CHANGELOG" && git push)
+      shell: bash
