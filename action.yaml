@@ -15,6 +15,11 @@ inputs:
   LERIAN_CI_CD_USER_EMAIL:
     required: true
 
+permission:
+  contents: read
+  id-token: write
+  packages: write
+
 runs:
   using: "composite"
   steps:
