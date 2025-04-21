@@ -22,11 +22,11 @@ jobs:
   generate-changelog:
     runs-on: ubuntu-latest
     steps:
-      - uses: LerianStudio/github-actions-gptchangelog@v1
+      - uses: LerianStudio/github-actions-gptchangelog@main
         with:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LERIAN_CI_CD_USER_GPG_KEY: ${{ secrets.LERIAN_CI_CD_USER_GPG_KEY }}
           LERIAN_CI_CD_USER_GPG_KEY_PASSWORD: ${{ secrets.LERIAN_CI_CD_USER_GPG_KEY_PASSWORD }}
-          LERIAN_CI_CD_USER_NAME: "lerian-bot"
-          LERIAN_CI_CD_USER_EMAIL: "ci-cd@lerian.studio"
+          LERIAN_CI_CD_USER_NAME: ${{ secrets.LERIAN_CI_CD_USER_NAME }}
+          LERIAN_CI_CD_USER_EMAIL: ${{ secrets.LERIAN_CI_CD_USER_EMAIL }}
