@@ -85,9 +85,7 @@ runs:
         TAG_COUNT=$(git tag | wc -l)
 
         if [ "$TAG_COUNT" -eq 0 ]; then
-          echo "🟡 Nenhuma tag encontrada. Criando changelog desde o primeiro commit até HEAD..."
-          FIRST_COMMIT=$(git rev-list --max-parents=0 HEAD)
-          gptchangelog generate --since $FIRST_COMMIT --to HEAD --output CHANGELOG.md
+          echo "🟡 Nenhuma tag encontrada. Pulando geração do changelog."
           echo "LAST_TAG=HEAD" >> $GITHUB_ENV
         else
           LAST_TAG=$(git describe --tags --abbrev=0 --match "v*" 2>/dev/null || true)
@@ -97,9 +95,7 @@ runs:
             echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
             gptchangelog generate --since $PENULT_TAG --to $LAST_TAG --output CHANGELOG.md
           else
-            echo "🟠 Tags existem, mas nenhuma aplicável ao HEAD. Gerando changelog desde o primeiro commit..."
-            FIRST_COMMIT=$(git rev-list --max-parents=0 HEAD)
-            gptchangelog generate --since $FIRST_COMMIT --to HEAD --output CHANGELOG.md
+            echo "🟠 Tags existem, mas nenhuma aplicável ao HEAD. Pulando geração do changelog."
             echo "LAST_TAG=HEAD" >> $GITHUB_ENV
           fi
         fi
