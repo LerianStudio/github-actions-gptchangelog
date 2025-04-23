@@ -157,10 +157,13 @@ runs:
         # Encontrar a linha que contém o cabeçalho
         HEADER_LINE=$(grep -n "^## \[" RELEASE_NOTES.md | cut -d: -f1)
         echo "📌 Cabeçalho encontrado na linha $HEADER_LINE do RELEASE_NOTES.md"
-
-        # A partir daqui você pode inspecionar ou fazer outras ações antes da substituição
-        cat RELEASE_NOTES.md  # Mostrar o conteúdo do RELEASE_NOTES.md
-      shell: bash
+    
+        # Substituir o cabeçalho com a versão LAST_TAG
+        sed -i "${HEADER_LINE}s|^## \[v[^]]*\] - .*|## Version ${LAST_TAG//v/}|" RELEASE_NOTES.md
+    
+        # Mostrar o conteúdo do RELEASE_NOTES.md após a substituição
+        cat RELEASE_NOTES.md
+      shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
       env:
         LAST_TAG: ${{ env.LAST_TAG }}
 
