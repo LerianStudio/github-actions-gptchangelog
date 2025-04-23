@@ -111,9 +111,8 @@ runs:
     
     - name: Substituir cabeçalho da versão
       run: |
-        HEADER_LINE=$(grep -n "^## \[[0-9]\+\.[0-9]\+\.[0-9]\+\(-[a-zA-Z0-9.]\+\)\?\] - [0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}" CHANGELOG.md | head -n1 | cut -d: -f1)
-        echo "📌 Linha da versão mais recente: $HEADER_LINE"
-        sed -i "${HEADER_LINE}s|^## \[[^]]*\] - .*|## Version ${LAST_TAG//v/}|" CHANGELOG.md
+        echo "📌 Substituindo cabeçalho da versão na linha 2"
+        sed -i "2s|^## \[[^]]*\] - .*|## Version ${LAST_TAG//v/}|" CHANGELOG.md
         cat CHANGELOG.md
       shell: bash
       env:
@@ -154,10 +153,25 @@ runs:
         OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY }}
 
     - run: |
+        # Captura a linha do cabeçalho da versão
         HEADER_LINE=$(grep -n "^## \[[0-9]\+\.[0-9]\+\.[0-9]\+\(-[a-zA-Z0-9.]\+\)\?\] - [0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}" RELEASE_NOTES.md | head -n1 | cut -d: -f1)
+
+        # Verifica se a linha foi encontrada
+        if [ -z "$HEADER_LINE" ]; then
+          echo "Erro: não foi possível encontrar o cabeçalho da versão em RELEASE_NOTES.md"
+          exit 1
+        fi
+
         echo "📌 Linha da versão mais recente: $HEADER_LINE"
+
+        # Substitui o cabeçalho da versão
         sed -i "${HEADER_LINE}s|^## \[[^]]*\] - .*|## Version ${LAST_TAG//v/}|" RELEASE_NOTES.md
+
+        # Exibe o arquivo para confirmação
         cat RELEASE_NOTES.md
+  shell: bash
+  env:
+    LAST_TAG: ${{ env.LAST_TAG }}
       shell: bash
       env:
         LAST_TAG: ${{ env.LAST_TAG }}
