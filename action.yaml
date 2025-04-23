@@ -109,12 +109,15 @@ runs:
       env:
         OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY }}
     
-    - name: Encontrar a linha do cabeçalho da nova versão no CHANGELOG.md
+    - name: Substituir cabeçalho da versão
       run: |
-        HEADER_LINE=$(find . -type f -name "CHANGELOG.md" -exec grep -n "^## \[[0-9]\+\.[0-9]\+\.[0-9]\+\(-[a-zA-Z0-9.]\+\)\?\] - [0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}" {} \; | cut -d: -f1)
-        echo "🧾 Cabeçalhos encontrados nas seguintes linhas do CHANGELOG.md:"
-        echo "$HEADER_LINE"
+        HEADER_LINE=$(grep -n "^## \[[0-9]\+\.[0-9]\+\.[0-9]\+\(-[a-zA-Z0-9.]\+\)\?\] - [0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}" CHANGELOG.md | head -n1 | cut -d: -f1)
+        echo "📌 Linha da versão mais recente: $HEADER_LINE"
+        sed -i "${HEADER_LINE}s|^## \[[^]]*\] - .*|## Version ${LAST_TAG//v/}|" CHANGELOG.md
+        cat CHANGELOG.md
       shell: bash
+      env:
+        LAST_TAG: ${{ env.LAST_TAG }}
 
     # - run: |
     #     echo "📦 LAST_TAG is: $LAST_TAG"
