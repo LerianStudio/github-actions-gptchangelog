@@ -162,13 +162,8 @@ runs:
           exit 1
         fi
 
-        echo "📌 Linha da versão mais recente: $HEADER_LINE"
-
-        # Substitui o cabeçalho da versão
-        sed -i "${HEADER_LINE}s|^## \[[^]]*\] - .*|## Version ${LAST_TAG//v/}|" RELEASE_NOTES.md
-
-        # Exibe o arquivo para confirmação
-        cat RELEASE_NOTES.md
+        # Exibe o número da linha onde o cabeçalho da versão foi encontrado
+        echo "📌 A linha do cabeçalho da versão é: $HEADER_LINE"
       shell: bash
       env:
         LAST_TAG: ${{ env.LAST_TAG }}
