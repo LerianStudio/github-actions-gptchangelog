@@ -82,22 +82,24 @@ runs:
         echo "OPENAI_API_KEY=${OPENAI_API_KEY}" > .env
         git fetch --tags
 
-        TAG_COUNT=$(git tag | wc -l)
+        # Verifica se existe ao menos uma tag
+        if git describe --tags --abbrev=0 --match "v*" HEAD >/dev/null 2>&1; then
+          LAST_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD)
 
-        if [ "$TAG_COUNT" -eq 0 ]; then
-          echo "🟡 Nenhuma tag encontrada. Pulando geração do changelog."
-          echo "LAST_TAG=HEAD" >> $GITHUB_ENV
-        else
-          LAST_TAG=$(git describe --tags --abbrev=0 --match "v*" 2>/dev/null || true)
-
-          if [ -n "$LAST_TAG" ]; then
-            PENULT_TAG=$(git describe --tags --abbrev=0 --match "v*" "$LAST_TAG"^ 2>/dev/null || git rev-list --max-parents=0 HEAD)
-            echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
-            gptchangelog generate --since $PENULT_TAG --to $LAST_TAG --output CHANGELOG.md
+          # Tenta obter a tag anterior
+          if git describe --tags --abbrev=0 --match "v*" HEAD^ >/dev/null 2>&1; then
+            PENULT_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD^)
+            echo "🟢 Gerando changelog de $PENULT_TAG até $LAST_TAG"
+            gptchangelog generate --since "$PENULT_TAG" --to "$LAST_TAG" --output RELEASE_NOTES.md
           else
-            echo "🟠 Tags existem, mas nenhuma aplicável ao HEAD. Pulando geração do changelog."
-            echo "LAST_TAG=HEAD" >> $GITHUB_ENV
+            FIRST_COMMIT=$(git rev-list --max-parents=0 HEAD)
+            echo "🟡 Primeira tag detectada. Gerando changelog de $FIRST_COMMIT até $LAST_TAG"
+            gptchangelog generate --since "$FIRST_COMMIT" --to "$LAST_TAG" --output RELEASE_NOTES.md
           fi
+        else
+          FIRST_COMMIT=$(git rev-list --max-parents=0 HEAD)
+          echo "🔴 Nenhuma tag detectada. Gerando changelog de $FIRST_COMMIT até HEAD"
+          gptchangelog generate --since "$FIRST_COMMIT" --to HEAD --output RELEASE_NOTES.md
         fi
       shell: bash
       env:
@@ -106,35 +108,21 @@ runs:
     - run: |
         sed -i "2s|^## \[v.*\] - .*|## Version $LAST_TAG|" CHANGELOG.md
       shell: bash
-
+    
     - run: |
         echo "OPENAI_API_KEY=${OPENAI_API_KEY}" > .env
         git fetch --tags
 
-        TAGS=($(git tag --sort=-creatordate))
+        LAST_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD)
+        PENULT_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD^)
 
-        if [ ${#TAGS[@]} -eq 0 ]; then
-          echo "🟡 Nenhuma tag encontrada. Criando changelog desde o primeiro commit até HEAD..."
-          FIRST_COMMIT=$(git rev-list --max-parents=0 HEAD)
-          gptchangelog generate --since $FIRST_COMMIT --to HEAD --output CHANGELOG.md
-          echo "LAST_TAG=HEAD" >> $GITHUB_ENV
+        gptchangelog generate --since $PENULT_TAG --to $LAST_TAG --output RELEASE_NOTES.md
 
-        elif [ ${#TAGS[@]} -eq 1 ]; then
-          echo "🟡 Apenas uma tag encontrada. Criando changelog desde o primeiro commit até ${TAGS[0]}..."
-          FIRST_COMMIT=$(git rev-list --max-parents=0 HEAD)
-          LAST_TAG=${TAGS[0]}
-          gptchangelog generate --since $FIRST_COMMIT --to $LAST_TAG --output CHANGELOG.md
-          echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
-
-        else
-          LAST_TAG=${TAGS[0]}
-          PENULT_TAG=${TAGS[1]}
-          echo "✅ Usando últimas duas tags: $PENULT_TAG → $LAST_TAG"
-          gptchangelog generate --since $PENULT_TAG --to $LAST_TAG --output CHANGELOG.md
-          echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
-        fi
+        echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
       shell: bash
-      
+      env:
+        OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY }}
+
     - run: |
         HEADER_LINE=$(grep -n "^## \[v" RELEASE_NOTES.md | cut -d: -f1)
         sed -i "${HEADER_LINE}s|^## \[v[^]]*\] - .*|## Version ${LAST_TAG//v/}|" RELEASE_NOTES.md
