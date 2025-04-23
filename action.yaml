@@ -90,9 +90,10 @@ runs:
           gptchangelog generate --since $FIRST_COMMIT --to HEAD --output CHANGELOG.md
           echo "LAST_TAG=HEAD" >> $GITHUB_ENV
         else
-          if git describe --tags --abbrev=0 --match "v*" HEAD >/dev/null 2>&1; then
-            LAST_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD)
-            PENULT_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD^)
+          LAST_TAG=$(git describe --tags --abbrev=0 --match "v*" 2>/dev/null || true)
+
+          if [ -n "$LAST_TAG" ]; then
+            PENULT_TAG=$(git describe --tags --abbrev=0 --match "v*" "$LAST_TAG"^ 2>/dev/null || git rev-list --max-parents=0 HEAD)
             echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
             gptchangelog generate --since $PENULT_TAG --to $LAST_TAG --output CHANGELOG.md
           else
