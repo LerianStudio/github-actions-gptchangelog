@@ -113,12 +113,27 @@ runs:
         echo "OPENAI_API_KEY=${OPENAI_API_KEY}" > .env
         git fetch --tags
 
-        LAST_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD)
-        PENULT_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD^)
+        # Verifica se existe ao menos uma tag
+        if git describe --tags --abbrev=0 --match "v*" HEAD >/dev/null 2>&1; then
+          LAST_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD)
 
-        gptchangelog generate --since $PENULT_TAG --to $LAST_TAG --output RELEASE_NOTES.md
+          # Tenta obter a tag anterior
+          if git describe --tags --abbrev=0 --match "v*" HEAD^ >/dev/null 2>&1; then
+            PENULT_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD^)
+            echo "🟢 Gerando release notes de $PENULT_TAG até $LAST_TAG"
+            gptchangelog generate --since "$PENULT_TAG" --to "$LAST_TAG" --output RELEASE_NOTES.md
+          else
+            FIRST_COMMIT=$(git rev-list --max-parents=0 HEAD)
+            echo "🟡 Primeira tag detectada. Gerando release notes de $FIRST_COMMIT até $LAST_TAG"
+            gptchangelog generate --since "$FIRST_COMMIT" --to "$LAST_TAG" --output RELEASE_NOTES.md
+          fi
 
-        echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
+          echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
+        else
+          FIRST_COMMIT=$(git rev-list --max-parents=0 HEAD)
+          echo "🔴 Nenhuma tag detectada. Gerando release notes de $FIRST_COMMIT até HEAD"
+          gptchangelog generate --since "$FIRST_COMMIT" --to HEAD --output RELEASE_NOTES.md
+        fi
       shell: bash
       env:
         OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY }}
