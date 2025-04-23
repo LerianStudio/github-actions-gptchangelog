@@ -82,9 +82,9 @@ runs:
         echo "OPENAI_API_KEY=${OPENAI_API_KEY}" > .env
         git fetch --tags
 
-        TAGS=$(git tag --sort=-creatordate)
+        TAG_COUNT=$(git tag | wc -l)
 
-        if [ -z "$TAGS" ]; then
+        if [ "$TAG_COUNT" -eq 0 ]; then
           echo "🟡 Nenhuma tag encontrada. Criando changelog desde o primeiro commit até HEAD..."
           FIRST_COMMIT=$(git rev-list --max-parents=0 HEAD)
           gptchangelog generate --since $FIRST_COMMIT --to HEAD --output CHANGELOG.md
