@@ -169,13 +169,10 @@ runs:
 
         # Exibe o arquivo para confirmação
         cat RELEASE_NOTES.md
-  shell: bash
-  env:
-    LAST_TAG: ${{ env.LAST_TAG }}
       shell: bash
       env:
         LAST_TAG: ${{ env.LAST_TAG }}
-
+      
     - run: |
         gh release edit ${{ env.LAST_TAG }} --notes-file RELEASE_NOTES.md
       shell: bash
