@@ -154,9 +154,12 @@ runs:
         OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY }}
 
     - run: |
+        # Encontrar a linha que contém o cabeçalho
         HEADER_LINE=$(grep -n "^## \[" RELEASE_NOTES.md | cut -d: -f1)
-        sed -i "${HEADER_LINE}s|^## \[v[^]]*\] - .*|## Version ${LAST_TAG//v/}|" RELEASE_NOTES.md
-        cat RELEASE_NOTES.md
+        echo "📌 Cabeçalho encontrado na linha $HEADER_LINE do RELEASE_NOTES.md"
+
+        # A partir daqui você pode inspecionar ou fazer outras ações antes da substituição
+        cat RELEASE_NOTES.md  # Mostrar o conteúdo do RELEASE_NOTES.md
       shell: bash
       env:
         LAST_TAG: ${{ env.LAST_TAG }}
