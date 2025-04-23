@@ -144,7 +144,7 @@ runs:
         OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY }}
 
     - run: |
-        HEADER_LINE=$(grep -n "^## \[v" RELEASE_NOTES.md | cut -d: -f1)
+        HEADER_LINE=$(grep -n "^## \[" RELEASE_NOTES.md | cut -d: -f1)
         sed -i "${HEADER_LINE}s|^## \[v[^]]*\] - .*|## Version ${LAST_TAG//v/}|" RELEASE_NOTES.md
         cat RELEASE_NOTES.md
       shell: bash
