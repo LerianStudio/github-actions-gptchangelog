@@ -110,12 +110,12 @@ runs:
         OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY }}
     
     - run: |
-      # Encontrar a linha da versão no CHANGELOG.md
-      HEADER_LINE=$(find . -type f -name "CHANGELOG.md" -exec grep -n "^## \[v.*\]" {} \; | cut -d: -f1)
-      echo "A versão foi encontrada na linha $HEADER_LINE do arquivo CHANGELOG.md"
-      sed -i "${HEADER_LINE}s|^## \[v[^]]*\] - .*|## Version ${LAST_TAG//v/}|" CHANGELOG.md
-      cat CHANGELOG.md
-    shell: bash
+        # Encontrar a linha da versão no CHANGELOG.md
+        HEADER_LINE=$(find . -type f -name "CHANGELOG.md" -exec grep -n "^## \[v.*\]" {} \; | cut -d: -f1)
+        echo "A versão foi encontrada na linha $HEADER_LINE do arquivo CHANGELOG.md"
+        sed -i "${HEADER_LINE}s|^## \[v[^]]*\] - .*|## Version ${LAST_TAG//v/}|" CHANGELOG.md
+        cat CHANGELOG.md
+      shell: bash
       env:
         LAST_TAG: ${{ env.LAST_TAG }}
 
