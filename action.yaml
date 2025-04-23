@@ -90,10 +90,17 @@ runs:
           gptchangelog generate --since $FIRST_COMMIT --to HEAD --output CHANGELOG.md
           echo "LAST_TAG=HEAD" >> $GITHUB_ENV
         else
-          LAST_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD)
-          PENULT_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD^)
-          echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
-          gptchangelog generate --since $PENULT_TAG --to $LAST_TAG --output CHANGELOG.md
+          if git describe --tags --abbrev=0 --match "v*" HEAD >/dev/null 2>&1; then
+            LAST_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD)
+            PENULT_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD^)
+            echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
+            gptchangelog generate --since $PENULT_TAG --to $LAST_TAG --output CHANGELOG.md
+          else
+            echo "🟠 Tags existem, mas nenhuma aplicável ao HEAD. Gerando changelog desde o primeiro commit..."
+            FIRST_COMMIT=$(git rev-list --max-parents=0 HEAD)
+            gptchangelog generate --since $FIRST_COMMIT --to HEAD --output CHANGELOG.md
+            echo "LAST_TAG=HEAD" >> $GITHUB_ENV
+          fi
         fi
       shell: bash
       env:
