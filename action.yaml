@@ -82,12 +82,19 @@ runs:
         echo "OPENAI_API_KEY=${OPENAI_API_KEY}" > .env
         git fetch --tags
 
-        LAST_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD)
-        PENULT_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD^)
+        TAGS=$(git tag --sort=-creatordate)
 
-        echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
-
-        gptchangelog generate --since $PENULT_TAG --to $LAST_TAG --output CHANGELOG.md
+        if [ -z "$TAGS" ]; then
+          echo "🟡 Nenhuma tag encontrada. Criando changelog desde o primeiro commit até HEAD..."
+          FIRST_COMMIT=$(git rev-list --max-parents=0 HEAD)
+          gptchangelog generate --since $FIRST_COMMIT --to HEAD --output CHANGELOG.md
+          echo "LAST_TAG=HEAD" >> $GITHUB_ENV
+        else
+          LAST_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD)
+          PENULT_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD^)
+          echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
+          gptchangelog generate --since $PENULT_TAG --to $LAST_TAG --output CHANGELOG.md
+        fi
       shell: bash
       env:
         OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY }}
@@ -100,12 +107,19 @@ runs:
         echo "OPENAI_API_KEY=${OPENAI_API_KEY}" > .env
         git fetch --tags
 
-        LAST_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD)
-        PENULT_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD^)
+        TAGS=$(git tag --sort=-creatordate)
 
-        gptchangelog generate --since $PENULT_TAG --to $LAST_TAG --output RELEASE_NOTES.md
-
-        echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
+        if [ -z "$TAGS" ]; then
+          echo "🟡 Nenhuma tag encontrada. Criando release notes desde o primeiro commit até HEAD..."
+          FIRST_COMMIT=$(git rev-list --max-parents=0 HEAD)
+          gptchangelog generate --since $FIRST_COMMIT --to HEAD --output RELEASE_NOTES.md
+          echo "LAST_TAG=HEAD" >> $GITHUB_ENV
+        else
+          LAST_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD)
+          PENULT_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD^)
+          gptchangelog generate --since $PENULT_TAG --to $LAST_TAG --output RELEASE_NOTES.md
+          echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
+        fi
       shell: bash
       env:
         OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY }}
