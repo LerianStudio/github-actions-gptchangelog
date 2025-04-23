@@ -148,6 +148,8 @@ runs:
         sed -i "${HEADER_LINE}s|^## \[v[^]]*\] - .*|## Version ${LAST_TAG//v/}|" RELEASE_NOTES.md
         cat RELEASE_NOTES.md
       shell: bash
+      env:
+        LAST_TAG: ${{ env.LAST_TAG }}
 
     - run: |
         gh release edit ${{ env.LAST_TAG }} --notes-file RELEASE_NOTES.md
