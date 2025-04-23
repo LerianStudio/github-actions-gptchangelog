@@ -158,8 +158,13 @@ runs:
         HEADER_LINE=$(grep -n "^## \[" RELEASE_NOTES.md | cut -d: -f1)
         echo "📌 Cabeçalho encontrado na linha $HEADER_LINE do RELEASE_NOTES.md"
     
-        # Substituir o cabeçalho com a versão LAST_TAG
-        sed -i "${HEADER_LINE}s|^## \[v[^]]*\] - .*|## Version ${LAST_TAG//v/}|" RELEASE_NOTES.md
+        # Verifica se HEADER_LINE foi encontrado
+        if [ -n "$HEADER_LINE" ]; then
+          # Substituir o cabeçalho com a versão LAST_TAG
+          sed -i "${HEADER_LINE}s|^## \[v[^]]*\] - .*|## Version ${LAST_TAG//v/} - $(date '+%Y-%m-%d')|" RELEASE_NOTES.md
+        else
+          echo "🔴 Cabeçalho não encontrado. Não será feita a substituição."
+        fi
     
         # Mostrar o conteúdo do RELEASE_NOTES.md após a substituição
         cat RELEASE_NOTES.md
