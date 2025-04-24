@@ -120,13 +120,6 @@ runs:
       env:
         LAST_TAG: ${{ env.LAST_TAG }}
     
-    - name: Remover blocos markdown desnecessários
-      run: |
-        echo "🧽 Limpando blocos markdown inúteis"
-        sed -i '/^```markdown *$/d' CHANGELOG.md
-        cat CHANGELOG.md
-      shell: bash
-    
     - run: |
         echo "OPENAI_API_KEY=${OPENAI_API_KEY}" > .env
         git fetch --tags
@@ -177,13 +170,6 @@ runs:
       shell: bash
       env:
         LAST_TAG: ${{ env.LAST_TAG }}
-    
-    - name: Remover blocos markdown desnecessários
-      run: |
-        echo "🧽 Limpando blocos markdown inúteis"
-        sed -i '/^```markdown *$/d' CHANGELOG.md
-        cat CHANGELOG.md
-      shell: bash
       
     - run: |
         gh release edit ${{ env.LAST_TAG }} --notes-file RELEASE_NOTES.md
