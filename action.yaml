@@ -94,9 +94,6 @@ runs:
             echo "🟡 Primeira tag detectada. Gerando changelog de $FIRST_COMMIT até $LAST_TAG"
             gptchangelog generate --since "$FIRST_COMMIT" --to "$LAST_TAG" --output CHANGELOG.md
           fi
-         
-          echo "🧹 Limpando blocos de markdown extras"
-          sed -i '/^```/d' CHANGELOG.md
 
           # Exportando LAST_TAG para o ambiente
           echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
@@ -104,6 +101,9 @@ runs:
           FIRST_COMMIT=$(git rev-list --max-parents=0 HEAD)
           echo "🔴 Nenhuma tag detectada. Gerando changelog de $FIRST_COMMIT até HEAD"
           gptchangelog generate --since "$FIRST_COMMIT" --to HEAD --output CHANGELOG.md
+
+          echo "🧹 Limpando blocos de markdown extras"
+          sed -i '/^```/d' CHANGELOG.md
           
           # Fallback para LAST_TAG
           echo "LAST_TAG=HEAD" >> $GITHUB_ENV
