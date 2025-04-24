@@ -89,10 +89,12 @@ runs:
             PENULT_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD^)
             echo "🟢 Gerando changelog de $PENULT_TAG até $LAST_TAG"
             gptchangelog generate --since "$PENULT_TAG" --to "$LAST_TAG" --output CHANGELOG.md
+            cat CHANGELOG.md
           else
             FIRST_COMMIT=$(git rev-list --max-parents=0 HEAD)
             echo "🟡 Primeira tag detectada. Gerando changelog de $FIRST_COMMIT até $LAST_TAG"
             gptchangelog generate --since "$FIRST_COMMIT" --to "$LAST_TAG" --output CHANGELOG.md
+            cat CHANGELOG.md
           fi
 
           # Exportando LAST_TAG para o ambiente
@@ -101,7 +103,7 @@ runs:
           FIRST_COMMIT=$(git rev-list --max-parents=0 HEAD)
           echo "🔴 Nenhuma tag detectada. Gerando changelog de $FIRST_COMMIT até HEAD"
           gptchangelog generate --since "$FIRST_COMMIT" --to HEAD --output CHANGELOG.md
-
+          cat CHANGELOG.md 
           # Fallback para LAST_TAG
           echo "LAST_TAG=HEAD" >> $GITHUB_ENV
         fi
