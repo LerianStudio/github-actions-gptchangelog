@@ -150,15 +150,15 @@ runs:
       env:
         OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY }}
       
-    - run: |
-        # Substitui o cabeçalho da versão na linha 2, com ou sem 'v'
-        sed -i "2s|^## \[v*\([0-9]\+\.[0-9]\+\.[0-9]\+\)\] - .*|## [v${LAST_TAG//v/}] - $(date +%Y-%m-%d)|" RELEASE_NOTES.md
+    # - run: |
+    #     # Substitui o cabeçalho da versão na linha 2, com ou sem 'v'
+    #     sed -i "2s|^## \[v*\([0-9]\+\.[0-9]\+\.[0-9]\+\)\] - .*|## [v${LAST_TAG//v/}] - $(date +%Y-%m-%d)|" RELEASE_NOTES.md
 
-        # Exibe o arquivo para confirmação
-        cat RELEASE_NOTES.md
-      shell: bash
-      env:
-        LAST_TAG: ${{ env.LAST_TAG }}
+    #     # Exibe o arquivo para confirmação
+    #     cat RELEASE_NOTES.md
+    #   shell: bash
+    #   env:
+    #     LAST_TAG: ${{ env.LAST_TAG }}
 
     # - run: |
     #     # Captura a linha do cabeçalho da versão
