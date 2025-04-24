@@ -117,6 +117,46 @@ runs:
       shell: bash
       env:
         LAST_TAG: ${{ env.LAST_TAG }}
+    
+    - name: Limpar markdown desnecessário do CHANGELOG.md (preservando emojis)
+      run: |
+        echo "🧽 Limpando markdown mantendo os emojis"
+
+        # Remove seções com emoji sem conteúdo
+        awk '
+          BEGIN { keep = 1 }
+          /^### [[:space:]]*[✨🐛🔄🔧📚].*/ {
+            section = $0
+            getline next
+            if (next ~ /^$/) {
+              getline after
+              if (after ~ /^### / || after ~ /^## / || after ~ /^$/) {
+                keep = 0
+              } else {
+                print section
+                print ""
+                print next
+                keep = 1
+                print after
+              }
+            } else {
+              print section
+              print next
+              keep = 1
+            }
+            next
+          }
+          {
+            if (keep) print $0
+            keep = 1
+          }
+        ' CHANGELOG.md > cleaned.md && mv cleaned.md CHANGELOG.md
+
+        # Remove linhas em branco duplicadas
+        awk 'NF{p=0; print; next} !p{print; p=1}' CHANGELOG.md > tmp && mv tmp CHANGELOG.md
+
+        cat CHANGELOG.md
+      shell: bash
 
     # - run: |
     #     echo "📦 LAST_TAG is: $LAST_TAG"
