@@ -101,13 +101,13 @@ runs:
           FIRST_COMMIT=$(git rev-list --max-parents=0 HEAD)
           echo "🔴 Nenhuma tag detectada. Gerando changelog de $FIRST_COMMIT até HEAD"
           gptchangelog generate --since "$FIRST_COMMIT" --to HEAD --output CHANGELOG.md
-
-          echo "🧹 Limpando blocos de markdown extras"
-          sed -i '/^```/d' CHANGELOG.md
           
           # Fallback para LAST_TAG
           echo "LAST_TAG=HEAD" >> $GITHUB_ENV
         fi
+      
+        echo "🧹 Limpando blocos de markdown extras"
+        sed -i '/^```/d' CHANGELOG.md
       shell: bash
       env:
         OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY }}
