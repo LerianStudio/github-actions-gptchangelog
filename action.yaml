@@ -112,12 +112,22 @@ runs:
       env:
         OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY }}
       
-    - name: Descobrir linha do cabeçalho da versão
+    - name: Substituir cabeçalho da versão
       run: |
-        HEADER_LINE=$(grep -n "^## \[v[0-9]\+\.[0-9]\+\.[0-9]\+\(-[a-zA-Z0-9.]\+\)\?\] - " CHANGELOG.md | head -n 1 | cut -d: -f1)
-        echo "📍 Cabeçalho da versão encontrado na linha: $HEADER_LINE"
-        echo "::set-output name=header_line::$HEADER_LINE"
+        echo "📌 Substituindo cabeçalho da versão gerado pelo gptchangelog"
+
+        # Encontra a linha que contém o primeiro cabeçalho de versão `## [vX.Y.Z] - ...`
+        HEADER_LINE=$(grep -nE "^## \[v[0-9]+\.[0-9]+\.[0-9]+\] - " CHANGELOG.md | head -n 1 | cut -d: -f1)
+        echo "📍 Cabeçalho encontrado na linha: $HEADER_LINE"
+
+        # Substitui exatamente essa linha com a nova versão baseada no LAST_TAG
+        sed -i "${HEADER_LINE}s|^.*|## [v${LAST_TAG//v/}] - $(date +%Y-%m-%d)|" CHANGELOG.md
+
+        echo "✅ Linha atualizada:"
+        sed -n "${HEADER_LINE}p" CHANGELOG.md
       shell: bash
+      env:
+        LAST_TAG: ${{ env.LAST_TAG }}
     
     # - name: Substituir cabeçalho da versão
     #   run: |
