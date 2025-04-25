@@ -112,30 +112,14 @@ runs:
       env:
         OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY }}
       
-    - name: Descobrir linha do cabeçalho da versão
+    - name: Substituir cabeçalho da versão
       run: |
-        HEADER_LINE=$(grep -n "^## \[v[0-9]\+\.[0-9]\+\.[0-9]\+\(-[a-zA-Z0-9.]\+\)\?\] - " CHANGELOG.md | head -n 1 | cut -d: -f1)
-        echo "📍 Cabeçalho da versão encontrado na linha: $HEADER_LINE"
-        echo "::set-output name=header_line::$HEADER_LINE"
+        echo "📌 Substituindo cabeçalho da versão"
+        sed -i "5s|^## \[v[0-9]\+\.[0-9]\+\.[0-9]\+\(-[a-zA-Z0-9.]\+\)\?\] - .*|## [v${LAST_TAG//v/}] - $(date +%Y-%m-%d)|" CHANGELOG.md
+        cat CHANGELOG.md
       shell: bash
-    
-    # - name: Substituir cabeçalho da versão
-    #   run: |
-    #     echo "📌 Substituindo cabeçalho da versão"
-    #     sed -i "/^## \[v[0-9]\+\.[0-9]\+\.[0-9]\+\(-[a-zA-Z0-9.]\+\)\?\] - .*/c\## [v${LAST_TAG//v/}] - $(date +%Y-%m-%d)" CHANGELOG.md
-    #     cat CHANGELOG.md
-    #   shell: bash
-    #   env:
-    #     LAST_TAG: ${{ env.LAST_TAG }}
-
-    # - name: Substituir cabeçalho da versão
-    #   run: |
-    #     echo "📌 Substituindo cabeçalho da versão"
-    #     sed -i "2s|^## \[v[0-9]\+\.[0-9]\+\.[0-9]\+\(-[a-zA-Z0-9.]\+\)\?\] - .*|## [v${LAST_TAG//v/}] - $(date +%Y-%m-%d)|" CHANGELOG.md
-    #     cat CHANGELOG.md
-    #   shell: bash
-    #   env:
-    #     LAST_TAG: ${{ env.LAST_TAG }}
+      env:
+        LAST_TAG: ${{ env.LAST_TAG }}
     
     - run: |
         echo "OPENAI_API_KEY=${OPENAI_API_KEY}" > .env
