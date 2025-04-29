@@ -220,7 +220,27 @@ runs:
         git config --global user.email "${{ inputs.LERIAN_CI_CD_USER_EMAIL }}"
       shell: bash
 
+    # - run: |
+    #     git add CHANGELOG.md
+    #     git diff --cached --quiet || (git commit -S -m "chore(release): Update CHANGELOG" && git push)
+    #   shell: bash
+    
     - run: |
+        BRANCH_NAME="release/update-changelog-${{ env.LAST_TAG }}"
+        git checkout -b $BRANCH_NAME
+
         git add CHANGELOG.md
-        git diff --cached --quiet || (git commit -S -m "chore(release): Update CHANGELOG" && git push)
+        git diff --cached --quiet || git commit -S -m "chore(release): Update CHANGELOG"
+
+        git push origin $BRANCH_NAME
+
+        gh pr create \
+          --title "chore(release): Update CHANGELOG" \
+          --body "Atualização automática do changelog para ${{ env.LAST_TAG }}" \
+          --base develop \
+          --head $BRANCH_NAME
+
+        gh pr merge --auto --merge --delete-branch
+      env:
+        GH_TOKEN: ${{ inputs.GH_TOKEN }}
       shell: bash
