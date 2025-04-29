@@ -215,15 +215,21 @@ runs:
         git_user_signingkey: true
         git_commit_gpgsign: true
 
-    - run: |
-        git config --global user.name "${{ inputs.LERIAN_CI_CD_USER_NAME }}"
-        git config --global user.email "${{ inputs.LERIAN_CI_CD_USER_EMAIL }}"
-      shell: bash
+    # - run: |
+    #     git config --global user.name "${{ inputs.LERIAN_CI_CD_USER_NAME }}"
+    #     git config --global user.email "${{ inputs.LERIAN_CI_CD_USER_EMAIL }}"
+    #   shell: bash
 
     # - run: |
     #     git add CHANGELOG.md
     #     git diff --cached --quiet || (git commit -S -m "chore(release): Update CHANGELOG" && git push)
     #   shell: bash
+    
+    - uses: actions/create-github-app-token@v1
+      id: app-token
+      with:
+        app-id: ${{ secrets.LERIAN_STUDIO_MIDAZ_PUSH_BOT_APP_ID }}
+        private-key: ${{ secrets.LERIAN_STUDIO_MIDAZ_PUSH_BOT_PRIVATE_KEY }}
     
     - run: |
         BRANCH_NAME="release/update-changelog-${{ env.LAST_TAG }}"
@@ -240,7 +246,7 @@ runs:
           --base develop \
           --head $BRANCH_NAME
 
-        gh pr merge --auto --merge --delete-branch
+        gh pr merge --merge --delete-branch
       env:
-        GH_TOKEN: ${{ inputs.GH_TOKEN }}
+        GH_TOKEN: ${{ steps.app-token.outputs.token }}
       shell: bash
