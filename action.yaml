@@ -14,6 +14,10 @@ inputs:
     required: true
   LERIAN_CI_CD_USER_EMAIL:
     required: true
+  LERIAN_STUDIO_MIDAZ_PUSH_BOT_APP_ID:
+    required: true
+  LERIAN_STUDIO_MIDAZ_PUSH_BOT_PRIVATE_KEY:
+    required: true
 
 permission:
   contents: read
@@ -228,8 +232,8 @@ runs:
     - uses: actions/create-github-app-token@v1
       id: app-token
       with:
-        app-id: ${{ secrets.LERIAN_STUDIO_MIDAZ_PUSH_BOT_APP_ID }}
-        private-key: ${{ secrets.LERIAN_STUDIO_MIDAZ_PUSH_BOT_PRIVATE_KEY }}
+        app-id: ${{ inputs.LERIAN_STUDIO_MIDAZ_PUSH_BOT_APP_ID }}
+        private-key: ${{ inputs.LERIAN_STUDIO_MIDAZ_PUSH_BOT_PRIVATE_KEY }}
     
     - run: |
         BRANCH_NAME="release/update-changelog-${{ env.LAST_TAG }}"
