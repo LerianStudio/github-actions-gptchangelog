@@ -219,16 +219,6 @@ runs:
         git_user_signingkey: true
         git_commit_gpgsign: true
 
-    # - run: |
-    #     git config --global user.name "${{ inputs.LERIAN_CI_CD_USER_NAME }}"
-    #     git config --global user.email "${{ inputs.LERIAN_CI_CD_USER_EMAIL }}"
-    #   shell: bash
-
-    # - run: |
-    #     git add CHANGELOG.md
-    #     git diff --cached --quiet || (git commit -S -m "chore(release): Update CHANGELOG" && git push)
-    #   shell: bash
-    
     - uses: actions/create-github-app-token@v1
       id: app-token
       with:
@@ -243,6 +233,10 @@ runs:
         git diff --cached --quiet || git commit -S -m "chore(release): Update CHANGELOG"
 
         git push origin $BRANCH_NAME
+
+        # Fazendo o merge da develop antes de criar a PR para evitar conflitos
+        git fetch origin develop
+        git merge origin/develop --no-ff -m "Merge develop into ${BRANCH_NAME}"
 
         gh pr create \
           --title "chore(release): Update CHANGELOG" \
