@@ -234,7 +234,7 @@ runs:
 
         # Traz as últimas mudanças da develop antes de subir a branch
         git fetch origin develop
-        git merge origin/develop --no-ff -m "Merge develop into ${BRANCH_NAME}"
+        git merge -X ours origin/develop --no-ff -m "Merge develop into ${BRANCH_NAME}"
 
         # Agora sim, faz o push da branch atualizada
         git push origin $BRANCH_NAME
