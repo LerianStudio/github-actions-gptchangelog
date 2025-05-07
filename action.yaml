@@ -242,7 +242,7 @@ runs:
         }
 
         # Faz o push da branch atualizada
-        git push origin $BRANCH_NAME
+        git push --force-with-lease origin $BRANCH_NAME
 
         gh pr create \
           --title "chore(release): Update CHANGELOG" \
