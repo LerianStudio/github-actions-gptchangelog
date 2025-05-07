@@ -244,13 +244,16 @@ runs:
         # Faz o push da branch atualizada
         git push --force-with-lease origin $BRANCH_NAME
 
-        gh pr create \
-          --title "chore(release): Update CHANGELOG" \
-          --body "Atualização automática do changelog para ${{ env.LAST_TAG }}" \
-          --base develop \
-          --head $BRANCH_NAME
+        # Verifica se o PR já existe
+        if ! gh pr view $BRANCH_NAME --base develop > /dev/null 2>&1; then
+          gh pr create \
+            --title "chore(release): Update CHANGELOG" \
+            --body "Atualização automática do changelog para ${{ env.LAST_TAG }}" \
+            --base develop \
+            --head $BRANCH_NAME
+        fi
 
-        gh pr merge --merge --delete-branch
+        gh pr merge --merge --delete-branch || true
       env:
         GH_TOKEN: ${{ steps.app-token.outputs.token }}
       shell: bash
