@@ -236,6 +236,9 @@ runs:
         git fetch origin develop
         git merge -X ours origin/develop --no-ff -m "Merge develop into ${BRANCH_NAME}"
 
+        # Faz um pull com rebase para garantir que a branch local está atualizada
+        git pull --rebase origin $BRANCH_NAME
+
         # Faz o push da branch atualizada
         git push origin $BRANCH_NAME
 
