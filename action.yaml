@@ -232,11 +232,12 @@ runs:
         git add CHANGELOG.md
         git diff --cached --quiet || git commit -S -m "chore(release): Update CHANGELOG"
 
-        git push origin $BRANCH_NAME
-
-        # Fazendo o merge da develop antes de criar a PR para evitar conflitos
+        # Traz as últimas mudanças da develop antes de subir a branch
         git fetch origin develop
         git merge origin/develop --no-ff -m "Merge develop into ${BRANCH_NAME}"
+
+        # Agora sim, faz o push da branch atualizada
+        git push origin $BRANCH_NAME
 
         gh pr create \
           --title "chore(release): Update CHANGELOG" \
@@ -244,7 +245,7 @@ runs:
           --base develop \
           --head $BRANCH_NAME
 
-        gh pr merge --merge --delete-branch
+        gh pr merge --merge --delete-branch --auto
       env:
         GH_TOKEN: ${{ steps.app-token.outputs.token }}
       shell: bash
