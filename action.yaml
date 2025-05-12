@@ -253,7 +253,7 @@ runs:
             --head $BRANCH_NAME
         fi
 
-        gh pr merge --merge --delete-branch || true
+        gh pr merge --auto --delete-branch || true
       env:
         GH_TOKEN: ${{ steps.app-token.outputs.token }}
       shell: bash
