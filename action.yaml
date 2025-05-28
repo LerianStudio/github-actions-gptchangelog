@@ -226,7 +226,7 @@ runs:
         private-key: ${{ inputs.LERIAN_STUDIO_MIDAZ_PUSH_BOT_PRIVATE_KEY }}
     
     - run: |
-        BASE_BRANCH=$(jq -r '.pull_request.base.ref' "$GITHUB_EVENT_PATH")
+        BASE_BRANCH="${GITHUB_REF##*/}"
         BRANCH_NAME="release/update-changelog-${{ env.LAST_TAG }}"
         
         git checkout -b $BRANCH_NAME
