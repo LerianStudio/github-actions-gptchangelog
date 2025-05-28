@@ -226,15 +226,17 @@ runs:
         private-key: ${{ inputs.LERIAN_STUDIO_MIDAZ_PUSH_BOT_PRIVATE_KEY }}
     
     - run: |
+        BASE_BRANCH=$(jq -r '.pull_request.base.ref' "$GITHUB_EVENT_PATH")
         BRANCH_NAME="release/update-changelog-${{ env.LAST_TAG }}"
+        
         git checkout -b $BRANCH_NAME
 
         git add CHANGELOG.md
         git diff --cached --quiet || git commit -S -m "chore(release): Update CHANGELOG"
 
-        # Faz o merge da develop na sua branch, sempre priorizando sua versão do changelog
-        git fetch origin develop
-        git merge -X ours origin/develop --no-ff -m "Merge develop into ${BRANCH_NAME}" || {
+        # Faz o merge da BASE_BRANCH na sua branch, sempre priorizando sua versão do changelog
+        git fetch origin "$BASE_BRANCH"
+        git merge -X ours origin/"$BASE_BRANCH" --no-ff -m "Merge $BASE_BRANCH into ${BRANCH_NAME}" || {
           # Se houver conflito no merge (ex: ort não resolve tudo), força a resolução
           git checkout --ours CHANGELOG.md
           git add CHANGELOG.md
@@ -245,15 +247,15 @@ runs:
         git push --force-with-lease origin $BRANCH_NAME
 
         # Verifica se o PR já existe
-        if ! gh pr view $BRANCH_NAME --base develop > /dev/null 2>&1; then
+        if ! gh pr view $BRANCH_NAME --base "$BASE_BRANCH" > /dev/null 2>&1; then
           gh pr create \
             --title "chore(release): Update CHANGELOG" \
             --body "Atualização automática do changelog para ${{ env.LAST_TAG }}" \
-            --base develop \
+            --base "$BASE_BRANCH" \
             --head $BRANCH_NAME
         fi
 
-        gh pr merge --auto --delete-branch || true
+        gh pr merge --auto --delete-branch --merge || true
       env:
         GH_TOKEN: ${{ steps.app-token.outputs.token }}
       shell: bash
