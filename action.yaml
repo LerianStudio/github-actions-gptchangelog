@@ -82,6 +82,7 @@ runs:
       shell: bash
 
     - run: |
+        echo $WORK_DIR
         echo "OPENAI_API_KEY=${OPENAI_API_KEY}" > .env
         git fetch --tags
 
