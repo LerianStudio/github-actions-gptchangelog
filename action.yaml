@@ -90,14 +90,17 @@ runs:
 
         echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
 
-        gptchangelog generate --since $PENULT_TAG --to $LAST_TAG --output ${{ inputs.WORK_DIR }}/CHANGELOG.md
+        gptchangelog generate --since $PENULT_TAG --to $LAST_TAG --output ${WORK_DIR}/CHANGELOG.md
       shell: bash
       env:
         OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY }}
+        WORK_DIR: ${{ inputs.WORK_DIR }}
 
     - run: |
-        sed -i "2s|^## \[v.*\] - .*|## Version $LAST_TAG|" ${{ inputs.WORK_DIR }}/CHANGELOG.md
+        sed -i "2s|^## \[v.*\] - .*|## Version $LAST_TAG|" ${WORK_DIR}/CHANGELOG.md
       shell: bash
+      env:
+        WORK_DIR: ${{ inputs.WORK_DIR }}
 
     - run: |
         echo "OPENAI_API_KEY=${OPENAI_API_KEY}" > .env
@@ -141,6 +144,9 @@ runs:
       shell: bash
 
     - run: |
-        git add ${{ inputs.WORK_DIR }}/CHANGELOG.md
-        git diff --cached --quiet || (git commit -S -m "chore(release): Update CHANGELOG for ${{ inputs.WORK_DIR }}/CHANGELOG.md" && git push)
+        git add ${WORK_DIR}/CHANGELOG.md
+        git diff --cached --quiet || (git commit -S -m "chore(release): Update CHANGELOG for ${WORK_DIR}/CHANGELOG.md" && git push)
       shell: bash
+      env:
+        WORK_DIR: ${{ inputs.WORK_DIR }}
+        
