@@ -81,8 +81,26 @@ runs:
         EOF
       shell: bash
 
+    - name: Set changelog target path
+      id: changelog_path_setter
+      shell: bash
+      env:
+        WORK_DIR_INPUT: ${{ inputs.WORK_DIR }}
+      run: |
+        CHANGELOG_FILE_NAME="CHANGELOG.md"
+        FINAL_PATH=""
+        if [ -n "$WORK_DIR_INPUT" ] && [ "$WORK_DIR_INPUT" != "." ]; then
+          # WORK_DIR is specified and is not just '.'
+          FINAL_PATH="${WORK_DIR_INPUT}/${CHANGELOG_FILE_NAME}"
+          echo "INFO: WORK_DIR ('$WORK_DIR_INPUT') is set. CHANGELOG.md path: $FINAL_PATH"
+        else
+          # WORK_DIR is empty or '.', use current directory
+          FINAL_PATH="./${CHANGELOG_FILE_NAME}"
+          echo "INFO: WORK_DIR is empty or '.'. CHANGELOG.md path: $FINAL_PATH"
+        fi
+        echo "path=$FINAL_PATH" >> "$GITHUB_OUTPUT"
+
     - run: |
-        echo $WORK_DIR
         echo "OPENAI_API_KEY=${OPENAI_API_KEY}" > .env
         git fetch --tags
 
@@ -91,17 +109,17 @@ runs:
 
         echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
 
-        gptchangelog generate --since $PENULT_TAG --to $LAST_TAG --output ${WORK_DIR}/CHANGELOG.md
+        gptchangelog generate --since $PENULT_TAG --to $LAST_TAG --output "${CHANGELOG_TARGET_PATH}"
       shell: bash
       env:
         OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY }}
-        WORK_DIR: ${{ inputs.WORK_DIR }}
+        CHANGELOG_TARGET_PATH: ${{ steps.changelog_path_setter.outputs.path }}
 
     - run: |
-        sed -i "2s|^## \[v.*\] - .*|## Version $LAST_TAG|" ${WORK_DIR}/CHANGELOG.md
+        sed -i "2s|^## \[v.*\] - .*|## Version $LAST_TAG|" "${CHANGELOG_TARGET_PATH}"
       shell: bash
       env:
-        WORK_DIR: ${{ inputs.WORK_DIR }}
+        CHANGELOG_TARGET_PATH: ${{ steps.changelog_path_setter.outputs.path }}
 
     - run: |
         echo "OPENAI_API_KEY=${OPENAI_API_KEY}" > .env
@@ -145,9 +163,9 @@ runs:
       shell: bash
 
     - run: |
-        git add ${WORK_DIR}/CHANGELOG.md
-        git diff --cached --quiet || (git commit -S -m "chore(release): Update CHANGELOG for ${WORK_DIR}/CHANGELOG.md" && git push)
+        git add "${CHANGELOG_TARGET_PATH}"
+        git diff --cached --quiet || (git commit -S -m "chore(release): Update CHANGELOG for ${CHANGELOG_TARGET_PATH}" && git push)
       shell: bash
       env:
-        WORK_DIR: ${{ inputs.WORK_DIR }}
+        CHANGELOG_TARGET_PATH: ${{ steps.changelog_path_setter.outputs.path }}
         
