@@ -1,5 +1,5 @@
 name: Generate Changelog
-description: Generate changelog and release notes using gptchangelog
+description: Generate changelog zusing gptchangelog
 
 inputs:
   OPENAI_API_KEY:
@@ -14,6 +14,9 @@ inputs:
     required: true
   LERIAN_CI_CD_USER_EMAIL:
     required: true
+  WORK_DIR:
+    required: false
+    default: '.'
 
 permission:
   contents: read
@@ -78,6 +81,25 @@ runs:
         EOF
       shell: bash
 
+    - name: Set changelog target path
+      id: changelog_path_setter
+      shell: bash
+      env:
+        WORK_DIR_INPUT: ${{ inputs.WORK_DIR }}
+      run: |
+        CHANGELOG_FILE_NAME="CHANGELOG.md"
+        FINAL_PATH=""
+        if [ -n "$WORK_DIR_INPUT" ] && [ "$WORK_DIR_INPUT" != "." ]; then
+          # WORK_DIR is specified and is not just '.'
+          FINAL_PATH="${WORK_DIR_INPUT}/${CHANGELOG_FILE_NAME}"
+          echo "INFO: WORK_DIR ('$WORK_DIR_INPUT') is set. CHANGELOG.md path: $FINAL_PATH"
+        else
+          # WORK_DIR is empty or '.', use current directory
+          FINAL_PATH="./${CHANGELOG_FILE_NAME}"
+          echo "INFO: WORK_DIR is empty or '.'. CHANGELOG.md path: $FINAL_PATH"
+        fi
+        echo "path=$FINAL_PATH" >> "$GITHUB_OUTPUT"
+
     - run: |
         echo "OPENAI_API_KEY=${OPENAI_API_KEY}" > .env
         git fetch --tags
@@ -87,40 +109,17 @@ runs:
 
         echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
 
-        gptchangelog generate --since $PENULT_TAG --to $LAST_TAG --output CHANGELOG.md
+        gptchangelog generate --since $PENULT_TAG --to $LAST_TAG --output "${CHANGELOG_TARGET_PATH}"
       shell: bash
       env:
         OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY }}
+        CHANGELOG_TARGET_PATH: ${{ steps.changelog_path_setter.outputs.path }}
 
     - run: |
-        sed -i "2s|^## \[v.*\] - .*|## Version $LAST_TAG|" CHANGELOG.md
-      shell: bash
-
-    - run: |
-        echo "OPENAI_API_KEY=${OPENAI_API_KEY}" > .env
-        git fetch --tags
-
-        LAST_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD)
-        PENULT_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD^)
-
-        gptchangelog generate --since $PENULT_TAG --to $LAST_TAG --output RELEASE_NOTES.md
-
-        echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
+        sed -i "2s|^## \[v.*\] - .*|## Version $LAST_TAG|" "${CHANGELOG_TARGET_PATH}"
       shell: bash
       env:
-        OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY }}
-
-    - run: |
-        HEADER_LINE=$(grep -n "^## \[v" RELEASE_NOTES.md | cut -d: -f1)
-        sed -i "${HEADER_LINE}s|^## \[v[^]]*\] - .*|## Version ${LAST_TAG//v/}|" RELEASE_NOTES.md
-        cat RELEASE_NOTES.md
-      shell: bash
-
-    - run: |
-        gh release edit ${{ env.LAST_TAG }} --notes-file RELEASE_NOTES.md
-      shell: bash
-      env:
-        GH_TOKEN: ${{ inputs.GH_TOKEN }}
+        CHANGELOG_TARGET_PATH: ${{ steps.changelog_path_setter.outputs.path }}
 
     - uses: crazy-max/ghaction-import-gpg@v6
       with:
@@ -138,6 +137,9 @@ runs:
       shell: bash
 
     - run: |
-        git add CHANGELOG.md
-        git diff --cached --quiet || (git commit -S -m "chore(release): Update CHANGELOG" && git push)
+        git add "${CHANGELOG_TARGET_PATH}"
+        git diff --cached --quiet || (git commit -S -m "chore(release): Update CHANGELOG for ${CHANGELOG_TARGET_PATH}" && git push)
       shell: bash
+      env:
+        CHANGELOG_TARGET_PATH: ${{ steps.changelog_path_setter.outputs.path }}
+        
