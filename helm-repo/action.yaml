@@ -154,8 +154,8 @@ runs:
         
         if [ -n "$HEADER_LINE" ]; then
           echo "📍 Header found on line: $HEADER_LINE"
-          # Replace the found line with a header that has a 'v' prefix
-          sed -i "${HEADER_LINE}s|^.*|## [v${LAST_TAG//v/}] - $(date +%Y-%m-%d)|" $CHANGELOG_TARGET_PATH
+          # Replace the found line with a header that does not have a 'v' prefix
+          sed -i "${HEADER_LINE}s|^.*|## [${LAST_TAG//v/}] - $(date +%Y-%m-%d)|" $CHANGELOG_TARGET_PATH
           echo "✅ Header updated:"
           sed -n "${HEADER_LINE}p" $CHANGELOG_TARGET_PATH
         else
