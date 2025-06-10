@@ -190,7 +190,7 @@ runs:
         git checkout -b $BRANCH_NAME
 
         git add $CHANGELOG_TARGET_PATH
-        git diff --cached --quiet || git commit -S -m "chore(release): Update CHANGELOG"
+        git diff --cached --quiet || git commit -S -m "${{ inputs.WORK_DIR }}: Update CHANGELOG"
 
         # Faz o merge da BASE_BRANCH na sua branch, sempre priorizando sua versão do changelog
         git fetch origin "$BASE_BRANCH"
@@ -207,7 +207,7 @@ runs:
         # Verifica se o PR já existe
         if ! gh pr view $BRANCH_NAME --base "$BASE_BRANCH" > /dev/null 2>&1; then
           gh pr create \
-            --title "chore(release): Update CHANGELOG" \
+            --title "${{ inputs.WORK_DIR }}: Update CHANGELOG" \
             --body "Atualização automática do changelog para ${{ env.LAST_TAG }}" \
             --base "$BASE_BRANCH" \
             --head $BRANCH_NAME
