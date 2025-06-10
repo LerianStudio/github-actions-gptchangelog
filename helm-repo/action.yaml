@@ -108,31 +108,34 @@ runs:
         echo "OPENAI_API_KEY=${OPENAI_API_KEY}" > .env
         git fetch --tags
 
-        if git describe --tags --abbrev=0 --match "*" HEAD >/dev/null 2>&1; then
-          LAST_TAG=$(git describe --tags --abbrev=0 --match "*" HEAD)
+        PREFIX="${WORK_DIR}-" # Exemplo: WORK_DIR=midaz
 
-          if git describe --tags --abbrev=0 --match "*" HEAD^ >/dev/null 2>&1; then
-            PENULT_TAG=$(git describe --tags --abbrev=0 --match "*" HEAD^)
+        TAGS=($(git tag --list "${PREFIX}*" --sort=-creatordate))
+
+        if [ ${#TAGS[@]} -ge 1 ]; then
+          LAST_TAG=${TAGS[0]}
+          echo "🔖 LAST_TAG: $LAST_TAG"
+
+          if [ ${#TAGS[@]} -ge 2 ]; then
+            PENULT_TAG=${TAGS[1]}
             echo "🟢 Generating changelog from $PENULT_TAG to $LAST_TAG"
-            gptchangelog generate --since "$PENULT_TAG" --to "$LAST_TAG" --output $CHANGELOG_TARGET_PATH
+            gptchangelog generate --since "$PENULT_TAG" --to "$LAST_TAG" --output "$CHANGELOG_TARGET_PATH"
           else
             FIRST_COMMIT=$(git rev-list --max-parents=0 HEAD)
             echo "🟡 First tag detected. Generating changelog from $FIRST_COMMIT to $LAST_TAG"
-            gptchangelog generate --since "$FIRST_COMMIT" --to "$LAST_TAG" --output $CHANGELOG_TARGET_PATH
+            gptchangelog generate --since "$FIRST_COMMIT" --to "$LAST_TAG" --output "$CHANGELOG_TARGET_PATH"
           fi
 
-          # Export LAST_TAG to GITHUB_ENV
           echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
         else
           FIRST_COMMIT=$(git rev-list --max-parents=0 HEAD)
-          echo "🔴 No tag detected. Generating changelog from $FIRST_COMMIT to HEAD"
-          gptchangelog generate --since "$FIRST_COMMIT" --to HEAD --output $CHANGELOG_TARGET_PATH
-          
-          # Fallback LAST_TAG
+          echo "🔴 No tag found with prefix '${PREFIX}'. Generating changelog from $FIRST_COMMIT to HEAD"
+          gptchangelog generate --since "$FIRST_COMMIT" --to HEAD --output "$CHANGELOG_TARGET_PATH"
           echo "LAST_TAG=HEAD" >> $GITHUB_ENV
-        fi      
+        fi
+
         echo "🧹 Cleaning markdown extra blocks"
-        sed -i '/^```/d' $CHANGELOG_TARGET_PATH
+        sed -i '/^```/d' "$CHANGELOG_TARGET_PATH"
       shell: bash
       env:
         OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY }}
