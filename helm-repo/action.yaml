@@ -104,8 +104,8 @@ runs:
         echo "OPENAI_API_KEY=${OPENAI_API_KEY}" > .env
         git fetch --tags
 
-        LAST_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD)
-        PENULT_TAG=$(git describe --tags --abbrev=0 --match "v*" HEAD^)
+        LAST_TAG=$(git describe --tags --abbrev=0 --match "*" HEAD)
+        PENULT_TAG=$(git describe --tags --abbrev=0 --match "*" HEAD^)
 
         echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
 
