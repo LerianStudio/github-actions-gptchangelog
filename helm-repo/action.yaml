@@ -108,7 +108,7 @@ runs:
         echo "OPENAI_API_KEY=${OPENAI_API_KEY}" > .env
         git fetch --tags
 
-        PREFIX="${WORK_DIR}-"
+        PREFIX="$(basename "$WORK_DIR")-"
 
         TAGS=($(git tag -l -- "${PREFIX}*" | sort -rV))
 
