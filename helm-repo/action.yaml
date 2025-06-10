@@ -108,9 +108,9 @@ runs:
         echo "OPENAI_API_KEY=${OPENAI_API_KEY}" > .env
         git fetch --tags
 
-        PREFIX="${WORK_DIR}-" # Exemplo: WORK_DIR=midaz
+        PREFIX="${WORK_DIR}-"
 
-        TAGS=($(git tag --list "${PREFIX}*" --sort=-creatordate))
+        TAGS=($(git tag -l "${PREFIX}*" --sort=-creatordate))
 
         if [ ${#TAGS[@]} -ge 1 ]; then
           LAST_TAG=${TAGS[0]}
