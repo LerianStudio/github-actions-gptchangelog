@@ -110,7 +110,7 @@ runs:
 
         PREFIX="${WORK_DIR}-"
 
-        TAGS=($(git tag -l "${PREFIX}*" | sort -rV))
+        TAGS=($(git tag -l -- "${PREFIX}*" | sort -rV))
 
         if [ ${#TAGS[@]} -ge 1 ]; then
           LAST_TAG=${TAGS[0]}
