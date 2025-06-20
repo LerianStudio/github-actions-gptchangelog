@@ -22,6 +22,10 @@ inputs:
     required: false
     default: '.'
 
+  TAG_PREFIX:
+    description: 'An optional prefix for git tags. If not set, it is derived from WORK_DIR.'
+    required: false
+
 permission:
   contents: write
   id-token: write
@@ -108,26 +112,53 @@ runs:
         echo "OPENAI_API_KEY=${OPENAI_API_KEY}" > .env
         git fetch --tags
 
-        PREFIX="$(basename "$WORK_DIR")-"
+        if [ -n "${TAG_PREFIX}" ]; then
+          PREFIX="${TAG_PREFIX}"
+          echo "INFO: Using provided TAG_PREFIX: $PREFIX"
+        else
+          PREFIX="$(basename "$WORK_DIR")-"
+          echo "INFO: Deriving tag prefix from WORK_DIR: $PREFIX"
+        fi
 
-        TAGS=($(git tag -l -- "${PREFIX}*" | sort -rV))
+        TAGS=($(git for-each-ref --sort=-creatordate --format='%(refname:short)' "refs/tags/${PREFIX}*"))
 
         if [ ${#TAGS[@]} -ge 1 ]; then
           LAST_TAG=${TAGS[0]}
           echo "🔖 LAST_TAG: $LAST_TAG"
+          PENULT_TAG=""
 
           if [ ${#TAGS[@]} -ge 2 ]; then
-            PENULT_TAG=${TAGS[1]}
+            # If LAST_TAG is a stable release (e.g., v1.2.3), find the previous stable release.
+            if [[ "$LAST_TAG" != *-* ]]; then
+              echo "🔍 LAST_TAG is a stable release. Finding previous stable release."
+              # Iterate through the rest of the tags to find the next stable one.
+              for i in $(seq 1 $((${#TAGS[@]} - 1))); do
+                CANDIDATE_TAG=${TAGS[$i]}
+                if [[ "$CANDIDATE_TAG" != *-* ]]; then
+                  PENULT_TAG=$CANDIDATE_TAG
+                  break # Found it
+                fi
+              done
+            else
+              # If LAST_TAG is a pre-release (e.g., v1.2.3-beta.1), use the chronologically previous tag.
+              echo "🔍 LAST_TAG is a pre-release. Using the chronologically previous tag."
+              PENULT_TAG=${TAGS[1]}
+            fi
+          fi
+
+          if [ -n "$PENULT_TAG" ]; then
             echo "🟢 Generating changelog from $PENULT_TAG to $LAST_TAG"
             gptchangelog generate --since "$PENULT_TAG" --to "$LAST_TAG" --output "$CHANGELOG_TARGET_PATH"
           else
+            # Fallback for the very first tag or if no suitable previous tag was found.
             FIRST_COMMIT=$(git rev-list --max-parents=0 HEAD)
-            echo "🟡 First tag detected. Generating changelog from $FIRST_COMMIT to $LAST_TAG"
+            echo "🟡 No suitable previous tag found. Generating changelog from $FIRST_COMMIT to $LAST_TAG"
             gptchangelog generate --since "$FIRST_COMMIT" --to "$LAST_TAG" --output "$CHANGELOG_TARGET_PATH"
           fi
 
           echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
         else
+          # This block handles the case where no tags with the given prefix are found at all.
           FIRST_COMMIT=$(git rev-list --max-parents=0 HEAD)
           echo "🔴 No tag found with prefix '${PREFIX}'. Generating changelog from $FIRST_COMMIT to HEAD"
           gptchangelog generate --since "$FIRST_COMMIT" --to HEAD --output "$CHANGELOG_TARGET_PATH"
@@ -141,8 +172,23 @@ runs:
         OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY }}
         CHANGELOG_TARGET_PATH: ${{ steps.changelog_path_setter.outputs.path }}
         WORK_DIR: ${{ inputs.WORK_DIR }}
+        TAG_PREFIX: ${{ inputs.TAG_PREFIX }}
+
+    - name: Check for empty changelog
+      id: check_changelog
+      run: |
+        if [ -s "$CHANGELOG_TARGET_PATH" ] && ! grep -q "No commits found" "$CHANGELOG_TARGET_PATH" && ! grep -q "No changes" "$CHANGELOG_TARGET_PATH"; then
+          echo "changelog_generated=true" >> $GITHUB_OUTPUT
+        else
+          echo "changelog_generated=false" >> $GITHUB_OUTPUT
+          echo "Changelog is empty or contains no new commits. Skipping further steps."
+        fi
+      shell: bash
+      env:
+        CHANGELOG_TARGET_PATH: ${{ steps.changelog_path_setter.outputs.path }}
 
     - name: Replace version header
+      if: steps.check_changelog.outputs.changelog_generated == 'true'
       run: |
         if [ "${LAST_TAG}" == "HEAD" ]; then
           echo "LAST_TAG is HEAD, skipping version header replacement."
@@ -168,6 +214,7 @@ runs:
         CHANGELOG_TARGET_PATH: ${{ steps.changelog_path_setter.outputs.path }}
 
     - uses: crazy-max/ghaction-import-gpg@v6
+      if: steps.check_changelog.outputs.changelog_generated == 'true'
       with:
         gpg_private_key: ${{ inputs.LERIAN_CI_CD_USER_GPG_KEY }}
         passphrase: ${{ inputs.LERIAN_CI_CD_USER_GPG_KEY_PASSWORD }}
@@ -178,43 +225,45 @@ runs:
         git_commit_gpgsign: true
 
     - uses: actions/create-github-app-token@v1
+      if: steps.check_changelog.outputs.changelog_generated == 'true'
       id: app-token
       with:
         app-id: ${{ inputs.LERIAN_STUDIO_MIDAZ_PUSH_BOT_APP_ID }}
         private-key: ${{ inputs.LERIAN_STUDIO_MIDAZ_PUSH_BOT_PRIVATE_KEY }}
 
-    - run: |
-        BASE_BRANCH="${GITHUB_REF##*/}"
-        BRANCH_NAME="release/update-changelog-${{ env.LAST_TAG }}"
-        
-        git checkout -b $BRANCH_NAME
-
-        git add $CHANGELOG_TARGET_PATH
-        git diff --cached --quiet || git commit -S -m "${{ inputs.WORK_DIR }}: Update CHANGELOG"
-
-        # Faz o merge da BASE_BRANCH na sua branch, sempre priorizando sua versão do changelog
-        git fetch origin "$BASE_BRANCH"
-        git merge -X ours origin/"$BASE_BRANCH" --no-ff -m "Merge $BASE_BRANCH into ${BRANCH_NAME}" || {
-          # Se houver conflito no merge (ex: ort não resolve tudo), força a resolução
-          git checkout --ours $CHANGELOG_TARGET_PATH
-          git add $CHANGELOG_TARGET_PATH
-          git commit -m "resolve conflict using ours strategy"
-        }
-
-        # Faz o push da branch atualizada
-        git push --force-with-lease origin $BRANCH_NAME
-
-        # Verifica se o PR já existe
-        if ! gh pr view $BRANCH_NAME --base "$BASE_BRANCH" > /dev/null 2>&1; then
-          gh pr create \
-            --title "${{ inputs.WORK_DIR }}: Update CHANGELOG" \
-            --body "Atualização automática do changelog para ${{ env.LAST_TAG }}" \
-            --base "$BASE_BRANCH" \
-            --head $BRANCH_NAME
-        fi
-
-        gh pr merge --merge --delete-branch || true
+    - name: Create Changelog PR
+      if: steps.check_changelog.outputs.changelog_generated == 'true'
+      shell: bash
       env:
         GH_TOKEN: ${{ steps.app-token.outputs.token }}
         CHANGELOG_TARGET_PATH: ${{ steps.changelog_path_setter.outputs.path }}
-      shell: bash
+        LAST_TAG: ${{ env.LAST_TAG }}
+        WORK_DIR: ${{ inputs.WORK_DIR }}
+      run: |
+        BASE_BRANCH="${GITHUB_REF##*/}"
+        BRANCH_NAME="release/update-changelog-${LAST_TAG}"
+        COMMIT_MESSAGE="$WORK_DIR: Update CHANGELOG for $LAST_TAG"
+
+        git checkout -b $BRANCH_NAME
+
+        git add $CHANGELOG_TARGET_PATH
+        git diff --cached --quiet || git commit -S -m "$COMMIT_MESSAGE"
+
+        # Merge from base branch to incorporate other changes, keeping our changelog
+        git fetch origin "$BASE_BRANCH"
+        git merge -X ours "origin/$BASE_BRANCH" --no-ff -m "Merge branch '$BASE_BRANCH' into $BRANCH_NAME" || {
+          echo "Merge failed, attempting to resolve conflicts by keeping our changelog."
+          git checkout --ours "$CHANGELOG_TARGET_PATH"
+          git add "$CHANGELOG_TARGET_PATH"
+          git commit --no-edit
+        }
+
+        git push --force-with-lease origin "$BRANCH_NAME"
+
+        # Check if a PR already exists and create one if it doesn't
+        if ! gh pr list --head "$BRANCH_NAME" --base "$BASE_BRANCH" --json number | grep -q 'number'; then
+          echo "Creating new PR for branch $BRANCH_NAME."
+          gh pr create --base "$BASE_BRANCH" --head "$BRANCH_NAME" --title "$COMMIT_MESSAGE" --body "Automated changelog update for version ${LAST_TAG}."
+        else
+          echo "PR already exists for branch $BRANCH_NAME."
+        fi
