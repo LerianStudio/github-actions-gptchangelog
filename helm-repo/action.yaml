@@ -196,7 +196,7 @@ runs:
         fi
         echo "📌 Replacing version header"
         # Find the line with the version header, allowing for an optional 'v' prefix
-        HEADER_LINE=$(grep -nE "^## \[(v)?[0-9]+\.[0-9]+\.[0-9]+.*] - " $CHANGELOG_TARGET_PATH | head -n 1 | cut -d: -f1)
+        HEADER_LINE=$(grep -nE "^## \[([a-zA-Z0-9_-]+-)?(v)?[0-9]+\.[0-9]+\.[0-9]+.*] - " $CHANGELOG_TARGET_PATH | head -n 1 | cut -d: -f1)
         
         if [ -n "$HEADER_LINE" ]; then
           echo "📍 Header found on line: $HEADER_LINE"
